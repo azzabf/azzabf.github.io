@@ -8,6 +8,7 @@
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #111; }
       #game { width: 100vw; height: 100vh; position: relative; }
+
       #hud {
         position: absolute; top: 20px; left: 20px; z-index: 2;
         color: white; font-family: Arial, sans-serif; font-size: 20px;
@@ -31,33 +32,157 @@
       #restartHint { margin-top: 10px; font-size: 18px; color: #ffff00; display: none; }
       canvas { display:block; }
 
-      /* ✅ NEW: UI toggle styling */
+      /* UI panel */
       #ui {
         position: absolute;
         top: 20px;
         right: 20px;
-        z-index: 5;
+        z-index: 10;
         color: white;
         font-family: Arial, sans-serif;
-        font-size: 16px;
+        font-size: 14px;
         background: rgba(0,0,0,0.35);
         padding: 10px 12px;
         border-radius: 10px;
         user-select: none;
+        pointer-events: auto;
       }
       #ui input { transform: translateY(1px); }
+      #ui select { margin-left: 8px; }
+      #ui .row { margin-top: 8px; }
+
+      /* ===== Start Screen ===== */
+#startScreen {
+  position: absolute;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, rgba(0,255,255,0.12), rgba(0,0,0,0.92) 55%, rgba(0,0,0,0.98));
+  font-family: Arial, sans-serif;
+  color: white;
+}
+
+#startCard {
+  width: min(520px, 92vw);
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(0,255,255,0.35);
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 0 26px rgba(0,255,255,0.12);
+}
+
+#startTitle {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin: 0 0 6px;
+  text-shadow: 0 0 12px rgba(0,255,255,0.22);
+}
+
+#startSub {
+  margin: 0 0 14px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+#startRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.startControl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.startControl label { font-size: 14px; opacity: 0.95; }
+
+.startControl select, .startControl input[type="checkbox"] {
+  pointer-events: auto;
+}
+
+#startBtn {
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #001013;
+  background: linear-gradient(90deg, rgba(0,255,255,0.95), rgba(255,0,255,0.85));
+  cursor: pointer;
+}
+
+#startBtn:hover { filter: brightness(1.03); }
+
     </style>
   </head>
 
   <body>
     <div id="game">
+<div id="startScreen">
+  <div id="startCard">
+    <h1 id="startTitle">CS559 Legendary Obby</h1>
+    <p id="startSub">Group ID: <b>0002</b></p>
 
-      <!-- ✅ MOVED HERE (inside body) -->
+    <div id="startRow">
+      <div class="startControl">
+        <label for="startMode">Mode</label>
+        <div>
+          <select id="startMode">
+            <option value="prototype" selected>Prototype (no textures)</option>
+            <option value="full">Full (cyber + textures)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="startControl">
+        <label for="startAvatar">Character</label>
+        <div>
+          <select id="startAvatar">
+            <option value="box" selected>Box</option>
+            <option value="sphere">Sphere</option>
+            <option value="cylinder">Cylinder</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button id="startBtn">Start Game</button>
+    <p style="margin:12px 2px 0; font-size:12px; opacity:0.85;">
+      Tip: Press <b>C</b> to cycle characters in-game.
+    </p>
+  </div>
+</div>
+
       <div id="ui">
         <label>
           <input type="checkbox" id="modeToggle" />
-          Full Mode
+          Full Mode (textures)
         </label>
+
+        <div class="row">
+          <label for="avatarSelect">Character:</label>
+          <select id="avatarSelect">
+            <option value="box">Human (Box)</option>
+            <option value="sphere">Cat (Sphere)</option>
+            <option value="cylinder">Robot (Cylinder)</option>
+          </select>
+        </div>
+
+        <div class="row" style="font-size:12px; opacity:0.9;">
+          Press <b>C</b> to cycle characters
+        </div>
       </div>
 
       <div id="hud">
@@ -77,8 +202,8 @@
       </div>
     </div>
 
-    <!-- THREE (global THREE) -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
     <script src="./script.js"></script>
   </body>
 </html>
+
