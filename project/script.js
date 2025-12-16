@@ -334,13 +334,13 @@ renderer.domElement.addEventListener("wheel", (e) => {
     box: {
       geo: () => new THREE.BoxGeometry(1, 2, 1),
       color: 0x00ff00,
-      tex: () => loadImageTexture("assets/textures/cat.png")
+      tex: () => loadImageTexture("project/assets/textures/cat.png")
     },
     sphere: {
   geo: () => new THREE.SphereGeometry(1, 18, 18),
   color: 0xff66cc,
   tex: () => {
-    const t = loadImageTexture("assets/textures/rat.jpg");
+    const t = loadImageTexture("project/assets/textures/rat.jpg");
     t.offset.x = 0.25; // try 0.0, 0.25, 0.5, 0.75
     return t;
   }
@@ -349,7 +349,7 @@ cylinder: {
   geo: () => new THREE.CylinderGeometry(0.8, 0.8, 2, 18),
   color: 0x66ccff,
   tex: () => {
-    const t = loadImageTexture("assets/textures/cutiepatootie.jpg");
+    const t = loadImageTexture("project/assets/textures/cutiepatootie.jpg");
     t.offset.x = 0.25; // adjust as needed
     return t;
   }}}
