@@ -35,41 +35,116 @@ const startBtnEl = document.getElementById("startBtn");
   );
 
 
-
-const texLoader = new THREE.TextureLoader();
-
-function loadImageTexture(path) {
-  const t = texLoader.load(path);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = THREE.ClampToEdgeWrapping;
-  t.wrapT = THREE.ClampToEdgeWrapping;
-  t.repeat.set(1, 1);
-  t.offset.set(0, 0);
-  return t;
+function makeCanvasTexture(drawFn, size = 256) {
+  const c = document.createElement("canvas");
+  c.width = size; c.height = size;
+  const ctx = c.getContext("2d");
+  drawFn(ctx, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1, 1);
+  tex.needsUpdate = true;
+  return tex;
 }
 
+function texChecker(a = "#111", b = "#00ffff", n = 8) {
+  return makeCanvasTexture((ctx, s) => {
+    const step = s / n;
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        ctx.fillStyle = (x + y) % 2 ? a : b;
+        ctx.fillRect(x * step, y * step, step, step);
+      }
+    }
+  });
+}
 
-// Box: put the image ONLY on the front face so it’s centered & not duplicated
-function makeBoxFrontFaceMaterial(imagePath, fallbackColor = 0x00ff00) {
-  const tex = loadImageTexture(imagePath);
+function texNeonGrid(bg = "#040414", line = "#ff00ff", major = "#00ffff") {
+  return makeCanvasTexture((ctx, s) => {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, s, s);
 
-  // Order for BoxGeometry materials: +X, -X, +Y, -Y, +Z, -Z
-  // Front face is usually +Z in Three’s default UVs.
-  const side = new THREE.MeshStandardMaterial({ color: fallbackColor, emissive: 0x001010, emissiveIntensity: 0.2 });
-  const front = new THREE.MeshStandardMaterial({
-    map: tex,
-    color: 0xffffff,
-    emissive: 0x001a1a,
-    emissiveIntensity: 0.35,
-    roughness: 0.65,
+    ctx.globalAlpha = 0.8;
+    for (let i = 0; i <= s; i += 16) {
+      ctx.strokeStyle = line;
+      ctx.beginPath();
+      ctx.moveTo(i, 0); ctx.lineTo(i, s);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i); ctx.lineTo(s, i);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 2;
+    for (let i = 0; i <= s; i += 64) {
+      ctx.strokeStyle = major;
+      ctx.beginPath();
+      ctx.moveTo(i, 0); ctx.lineTo(i, s);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i); ctx.lineTo(s, i);
+      ctx.stroke();
+    }
+    ctx.lineWidth = 1;
+  });
+}
+
+function texHazard(bg = "#111", stripe = "#ffd000") {
+  return makeCanvasTexture((ctx, s) => {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, s, s);
+
+    ctx.strokeStyle = stripe;
+    ctx.lineWidth = s / 6;
+    for (let i = -s; i <= s * 2; i += s / 3) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i + s, s);
+      ctx.stroke();
+    }
+  });
+}
+
+function texNoise(bg = "#111") {
+  return makeCanvasTexture((ctx, s) => {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, s, s);
+    const img = ctx.getImageData(0, 0, s, s);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = (Math.random() * 255) | 0;
+      d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  });
+}
+
+// Box materials: +X, -X, +Y, -Y, +Z, -Z
+function makeBoxFrontFaceMaterial(frontTex, fallbackColor = 0x00ff00) {
+  const side = new THREE.MeshStandardMaterial({
+    color: fallbackColor,
+    emissive: 0x001010,
+    emissiveIntensity: 0.2,
+    roughness: 0.8,
     metalness: 0.05
   });
 
-// +X, -X, +Y, -Y, +Z, -Z
-return [side, side, side, side, side, front];
+  const front = new THREE.MeshStandardMaterial({
+    map: frontTex,
+    color: 0xffffff,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.25,
+    roughness: 0.6,
+    metalness: 0.0
+  });
 
-
+  return [side, side, side, side, front, side];
 }
+
+
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
@@ -229,8 +304,9 @@ renderer.domElement.addEventListener("wheel", (e) => {
     camLastY = e.clientY;
 
     const ROT_SPEED = 0.005;
-    camYaw   -= dx * ROT_SPEED;
-    camPitch -= dy * ROT_SPEED;
+   camYaw   -= dx * ROT_SPEED;
+camPitch += dy * ROT_SPEED;
+
 
     camPitch = Math.max(CAM_PITCH_MIN, Math.min(CAM_PITCH_MAX, camPitch));
   }
@@ -294,7 +370,7 @@ renderer.domElement.addEventListener("wheel", (e) => {
     enemy.position.set(x, y, z);
     enemy.castShadow = true;
 
-    const enemyData = { mesh: enemy, speed, health: 2 };
+    const enemyData = { mesh: enemy, speed, health: 2, hoverPhase: Math.random() * Math.PI * 2 };
     enemies.push(enemyData);
     scene.add(enemy);
     return enemyData;
@@ -330,29 +406,25 @@ renderer.domElement.addEventListener("wheel", (e) => {
     return tex;
   }
 
-  const avatarDefs = {
-    box: {
-      geo: () => new THREE.BoxGeometry(1, 2, 1),
-      color: 0x00ff00,
-      tex: () => loadImageTexture("project/assets/textures/cat.png")
-    },
-    sphere: {
-  geo: () => new THREE.SphereGeometry(1, 18, 18),
-  color: 0xff66cc,
-  tex: () => {
-    const t = loadImageTexture("project/assets/textures/rat.jpg");
-    t.offset.x = 0.25; // try 0.0, 0.25, 0.5, 0.75
-    return t;
+ const avatarDefs = {
+  box: {
+    geo: () => new THREE.BoxGeometry(1, 2, 1),
+    color: 0x00ff00,
+    tex: () => texNeonGrid()
+  },
+  sphere: {
+    geo: () => new THREE.SphereGeometry(1, 18, 18),
+    color: 0xff66cc,
+    tex: () => texChecker("#111", "#ff00ff", 10)
+  },
+  cylinder: {
+    geo: () => new THREE.CylinderGeometry(0.8, 0.8, 2, 18),
+    color: 0x66ccff,
+    tex: () => texHazard("#101020", "#00ffff")
   }
-},
-cylinder: {
-  geo: () => new THREE.CylinderGeometry(0.8, 0.8, 2, 18),
-  color: 0x66ccff,
-  tex: () => {
-    const t = loadImageTexture("project/assets/textures/cutiepatootie.jpg");
-    t.offset.x = 0.25; // adjust as needed
-    return t;
-  }}}
+};
+
+
 
 
   function setPlayerAvatar(type) {
@@ -385,16 +457,16 @@ cylinder: {
   // Full: cyber vibe + textures
   if (type === "box") {
     // “Face centered on front” for the human
-    player.material = makeBoxFrontFaceMaterial("assets/textures/cat.png", def.color);
+    player.material = makeBoxFrontFaceMaterial(TEX_BASE + "cat.png", def.color);
+
   } else {
-    // For non-box shapes: just map the image normally
-    player.material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      map: def.tex(),         // (you’ll set these paths per avatar)
-      emissive: 0x001a1a,
-      emissiveIntensity: 0.35,
-      roughness: 0.55,
-      metalness: 0.1
+   player.material = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    map: def.tex(),
+    emissive: 0x001a1a,
+    emissiveIntensity: 0.35,
+    roughness: 0.55,
+    metalness: 0.1
     });
   }
 }
@@ -621,6 +693,7 @@ cylinder: {
     return false;
   }
 
+
   function checkEnemyCollision() {
     for (const enemy of enemies) {
       const dist = player.position.distanceTo(enemy.mesh.position);
@@ -761,15 +834,24 @@ cylinder: {
       platform.mesh.position[axis] += platform.direction * 0.02;
     });
 
-    // Enemies chase
-    enemies.forEach(enemy => {
-      const dir = new THREE.Vector3()
-        .subVectors(player.position, enemy.mesh.position)
-        .normalize();
+   // Enemies float-chase (no gravity)
+enemies.forEach(enemy => {
+  const target = player.position.clone();
+  target.y += 1.0; // aim slightly above player
 
-      enemy.mesh.position.x += dir.x * enemy.speed;
-      enemy.mesh.position.z += dir.z * enemy.speed;
-    });
+  const dir = new THREE.Vector3().subVectors(target, enemy.mesh.position);
+  const dist = dir.length();
+  if (dist > 0.0001) dir.multiplyScalar(1 / dist);
+
+  const step = enemy.speed * Math.min(1, dist / 6);
+  enemy.mesh.position.addScaledVector(dir, step);
+
+  const t = performance.now() * 0.002 + enemy.hoverPhase;
+  enemy.mesh.position.y += Math.sin(t) * 0.01;
+});
+
+
+
 
     // Projectiles update + hit detection
     for (let i = projectiles.length - 1; i >= 0; i--) {
